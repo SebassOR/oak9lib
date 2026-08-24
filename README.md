@@ -27,6 +27,37 @@ Esto instala la librería en modo editable (los cambios en `oak9/` se
 reflejan sin reinstalar) y trae su única dependencia externa,
 `matplotlib`.
 
+Si además vas a hacer análisis, notebooks o visión sobre los datos
+del robot (contexto del curso LabDST-RoboCoffe), instala el resto del
+stack recomendado:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Requisitos adicionales para graficar
+
+`pip install -e .` trae matplotlib, pero matplotlib necesita un
+**backend gráfico** para que `robot.plot()` y `robot.live_plot()`
+abran una ventana. Si no hay uno disponible, `plt.show()` no hace
+nada (o truena) aunque la instalación haya sido "exitosa".
+
+- **Windows/macOS**: normalmente funciona sin pasos extra si Python
+  se instaló desde [python.org](https://python.org) (trae Tk incluido).
+- **Linux (Debian/Ubuntu)**: instala Tk aparte:
+  ```bash
+  sudo apt install python3-tk
+  ```
+- **Jupyter/Colab**: `plot()` (estático) funciona con el backend
+  inline por defecto, pero `live_plot()` (`plt.ion()` + `plt.pause()`)
+  no se actualiza bien dentro de una celda — mejor correrlo como
+  script (`python examples/...`), o instalar `ipympl` y activar
+  `%matplotlib widget` antes de llamarlo.
+- **WSL / servidores sin entorno gráfico**: no hay display, así que
+  ninguna ventana va a abrir. Necesitas un X server (p. ej. VcXsrv en
+  Windows) o usar `robot.sample(...)` para obtener los datos crudos
+  en vez de graficarlos.
+
 ## Uso básico
 
 `Robot(host, port=8080, timeout=5.0)` abre una conexión TCP al robot y

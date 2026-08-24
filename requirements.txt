@@ -1,1 +1,21 @@
+# `matplotlib` es la única dependencia real de oak9 (la que instala
+# `pip install -e .` vía pyproject.toml). El resto de este archivo es
+# el stack recomendado del curso LabDST-RoboCoffe para analizar,
+# prototipar y visualizar sobre los datos que regresa oak9 (notebooks,
+# cinemática, visión, etc.) — no lo necesitas para usar la librería.
+
 matplotlib
+
+numpy
+scipy
+pandas
+sympy
+jupyter
+notebook
+seaborn
+scikit-learn
+opencv-python
+pyyaml
+pyqt5
+transforms3d
+pytransform3d
