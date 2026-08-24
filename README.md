@@ -114,3 +114,7 @@ oak9lib/
 ├── pyproject.toml
 └── requirements.txt
 ```
+
+## Licencia
+
+[MIT](LICENSE)
