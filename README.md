@@ -73,6 +73,7 @@ expone un subsistema por sensor/actuador:
 | `wifi` | `network.py` | `servo` | `servo.py` |
 | `wheel_position` | `wheel_position.py` | `orientation` | `orientation.py` |
 | `ultrasonic` | `ultrasonic.py` | `position` | `position.py` |
+| `go2point` | `go2point.py` | | |
 
 También puede usarse como context manager (`with Robot(...) as robot:`),
 que cierra la conexión al salir.
@@ -105,12 +106,21 @@ directo:
 python examples/motor_example.py
 ```
 
+[`new-examples/`](new-examples/) tiene ejemplos mas elaborados que
+combinan varios subsistemas para tareas concretas (perfil de
+velocidad, rutas, reaccionar a un sensor, guardar datos a CSV):
+
+```bash
+python new-examples/velocity_profile_example.py
+```
+
 ## Estructura
 
 ```
 oak9lib/
-├── oak9/           # la librería
-├── examples/       # un ejemplo por subsistema
+├── oak9/            # la librería
+├── examples/        # un ejemplo por subsistema
+├── new-examples/    # ejemplos combinados, mas cercanos a un caso de uso real
 ├── pyproject.toml
 └── requirements.txt
 ```

@@ -1,9 +1,3 @@
-# Se quedan fisicamente en esta carpeta, pero NUNCA se rastrean/suben
-# a este repo (publico) -- experimentos y codigo viejo, no para
-# compartir.
-experiments/
-_removed/
-
 # Python
 *.pyc
 *.pyo

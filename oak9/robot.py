@@ -1,6 +1,7 @@
 from .battery import Battery
 from .encoder import Encoder
 from .geometry import Geometry
+from .go2point import Go2Point
 from .identity import Identity
 from .imu import Imu
 from .indicators import Indicators
@@ -39,6 +40,7 @@ class Robot:
         self.servo = Servo(self._transport)
         self.orientation = Orientation(self._transport)
         self.position = Position(self._transport)
+        self.go2point = Go2Point(self._transport)
 
     def __repr__(self):
         return repr(self._transport).replace("Transport", "Robot", 1)

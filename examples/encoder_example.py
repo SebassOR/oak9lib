@@ -1,14 +1,14 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.3.3")
 
-print(robot.encoder.read())
-print(robot.encoder.reset())
-print(robot.encoder.cpr_get())
-print(robot.encoder.cpr_set(1336))
-print(robot.encoder.invert_get())
-print(robot.encoder.invert_set(left=True, right=False))
-print(robot.encoder.kinematics())
+print(robot.encoder.read())        # ticks acumulados de cada rueda
+print(robot.encoder.reset())       # pone los contadores en 0
+print(robot.encoder.cpr_get())     # cuentas por revolucion (CPR) configuradas
+print(robot.encoder.cpr_set(1336)) # cambia el CPR (se guarda en el firmware)
+print(robot.encoder.invert_get())  # que ruedas tienen el signo invertido
+"""print(robot.encoder.invert_set(left=True, right=False))
+print(robot.encoder.kinematics())  # velocidad/aceleracion angular derivadas de los encoders
 
 robot.live_plot(robot.encoder.read, ["left_deg", "right_deg"], interval=0.05)
 
@@ -18,4 +18,4 @@ robot.live_plot(
     interval=0.05
 )
 
-robot.close()
+robot.close()"""
