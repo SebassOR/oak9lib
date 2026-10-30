@@ -7,7 +7,7 @@ from oak9 import Robot
 omega = 120.0  # deg/s, velocidad de crucero
 d_min = 15.0   # mm
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 try:
     robot.wheel_velocity.set(left=omega, right=omega)  # avanza derecho a velocidad constante

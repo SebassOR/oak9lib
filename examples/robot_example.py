@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.send("motor.pwm", left=100, right=100))  # escape hatch: manda cualquier comando del router por su nombre
 

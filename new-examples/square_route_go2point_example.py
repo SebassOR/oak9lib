@@ -7,7 +7,7 @@ from oak9 import Robot
 
 lado = 300.0  # mm, largo de cada lado del cuadrado
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 # rampa mas suave que el default -- menos velocidad/aceleracion en el avance
 # reduce el retraso de wheel_velocity respecto al perfil (y con eso el
 # tramo que se queda corto en cada vertice, ver conversacion)

@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.ultrasonic.read())        # distancia medida por el sensor (s1)
 print(robot.ultrasonic.filter_get())  # parametros del filtro actual

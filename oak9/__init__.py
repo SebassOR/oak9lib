@@ -4,7 +4,7 @@ control, sensores y perfiles de movimiento.
 
     from oak9 import Robot
 
-    robot = Robot("192.168.3.1")
+    robot = Robot("192.168.100.9")
     robot.motor.pwm(left=100, right=100)
     robot.motor.stop()
     robot.battery.read()

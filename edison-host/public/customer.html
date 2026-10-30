@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f5ed">
+  <title>RoboCoffee | Menú</title>
+  <link rel="stylesheet" href="/customer.css">
+</head>
+<body>
+  <header class="customer-header">
+    <a class="customer-brand" href="/cliente">
+      <span class="brand-mark">R</span>
+      <span><strong>RoboCoffee</strong><small>CAFÉ Y ROBOTS</small></span>
+    </a>
+    <span class="header-note"><i></i> CAFÉ HECHO CON CARIÑO</span>
+  </header>
+
+  <main class="customer-main">
+    <section class="customer-hero">
+      <div class="hero-text">
+        <p class="eyebrow">UNA PAUSA PARA TI</p>
+        <h1>¿Qué se te antoja <span>hoy?</span></h1>
+        <p>Elige algo rico y RoboCoffee lo lleva hasta tu mesa.</p>
+      </div>
+      <div class="hero-cup" aria-hidden="true"><span class="cup-steam"></span><span class="cup-body">☕</span><span class="cup-handle"></span></div>
+    </section>
+
+    <section class="recommendation-panel">
+      <div class="recommendation-icon">✦</div>
+      <div class="recommendation-copy">
+        <div class="recommendation-meta"><span id="climate-label">RECOMENDACIÓN DEL MOMENTO</span><span id="temperature-label">22 °C</span></div>
+        <h2 id="recommendation-title">Buscando una recomendación…</h2>
+        <p id="recommendation-detail">Un momento, estamos preparando el menú.</p>
+        <button id="choose-recommended" class="recommendation-button" type="button">Elegir recomendado <span>→</span></button>
+      </div>
+      <div class="temperature-control">
+        <label for="temperature">Temperatura de referencia</label>
+        <div class="temperature-values"><span>5 °C</span><output id="temperature-output" for="temperature">22 °C</output><span>40 °C</span></div>
+        <input id="temperature" type="range" min="5" max="40" step="1" value="22">
+        <small>No hay sensor meteorológico conectado; ajústala según el ambiente.</small>
+      </div>
+    </section>
+
+    <section class="menu-section">
+      <div class="menu-heading"><div><p class="eyebrow">RECIÉN PREPARADOS</p><h2>El menú</h2></div><span>Elige tu favorito</span></div>
+      <div id="coffee-menu" class="coffee-grid" aria-live="polite">
+        <div class="menu-loading">Preparando el menú…</div>
+      </div>
+    </section>
+
+    <section class="order-panel">
+      <div class="order-heading"><span class="order-step">01</span><div><p class="eyebrow">TU PEDIDO</p><h2>¿A quién se lo llevamos?</h2></div></div>
+      <form id="customer-order-form">
+        <div class="form-grid">
+          <div class="form-field"><label for="customer-name">Tu nombre</label><input id="customer-name" name="nombre" type="text" maxlength="60" autocomplete="name" placeholder="Ej. Alex" required></div>
+          <div class="form-field"><label for="table-number">Mesa</label><select id="table-number" name="mesa"><option value="1">Mesa 1</option><option value="2">Mesa 2</option><option value="3">Mesa 3</option><option value="4">Mesa 4</option></select></div>
+        </div>
+        <fieldset class="presentation-field">
+          <legend>¿Cómo lo prefieres?</legend>
+          <label class="presentation-option"><input type="radio" name="presentacion" value="caliente" checked><span>♨</span> Caliente</label>
+          <label id="cold-option" class="presentation-option disabled"><input type="radio" name="presentacion" value="frio" disabled><span>❄</span> Frío <small>Americano</small></label>
+        </fieldset>
+        <div class="order-summary"><span>Tu café</span><strong id="selected-coffee">Selecciona uno del menú</strong></div>
+        <button id="submit-order" class="submit-order" type="submit" disabled>Confirmar pedido <span>→</span></button>
+        <p id="form-error" class="form-error" role="alert"></p>
+      </form>
+    </section>
+
+    <section id="order-tracking" class="tracking-panel" hidden aria-live="polite">
+      <span class="tracking-icon">☕</span>
+      <p class="eyebrow">PEDIDO #<span id="tracking-id"></span></p>
+      <h2 id="tracking-title">¡Pedido recibido!</h2>
+      <p id="tracking-detail">El trabajador recibió tu pedido.</p>
+      <span id="tracking-status" class="tracking-status">Pendiente</span>
+      <button id="received-button" class="submit-order" type="button" hidden>Ya recibí mi café</button>
+      <button id="another-order" class="text-button" type="button">Hacer otro pedido</button>
+    </section>
+
+    <footer class="customer-footer">
+      <a href="/trabajador">¿Eres trabajador? <strong>Ir al panel de servicio</strong> →</a>
+      <span>ROBOCOFFEE · QUE TENGAS UN BUEN DÍA</span>
+    </footer>
+  </main>
+  <script src="/customer.js"></script>
+</body>
+</html>

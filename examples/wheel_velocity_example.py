@@ -1,10 +1,10 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.wheel_velocity.pid_get())  # ganancias actuales del control de velocidad por rueda
 print(robot.wheel_velocity.pid_set(kp=2.6, ki=0.275, kd=0.01, ts_ms=25, alpha=0.12))  # ajusta el PID
-print(robot.wheel_velocity.set(left=90, right=90))  # velocidad objetivo por rueda, en deg/s
+print(robot.wheel_velocity.set(left=400, right=400))  # velocidad objetivo por rueda, en deg/s
 print(robot.wheel_velocity.status())  # objetivo vs velocidad medida
 
 robot.live_plot(

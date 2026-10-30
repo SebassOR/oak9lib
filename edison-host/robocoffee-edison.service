@@ -1,0 +1,18 @@
+[Unit]
+Description=RoboCoffee Node.js host
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/root/edison-host
+Environment=HOST=0.0.0.0
+Environment=PORT=3000
+Environment=ROBOT_IP=192.168.100.9
+Environment=ROBOT_PORT=8080
+ExecStart=/usr/bin/node /home/root/edison-host/server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

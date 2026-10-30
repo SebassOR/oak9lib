@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.2")
+robot = Robot("192.168.0.102")
 
 print(robot.imu.read())         # datos crudos del acelerometro/giroscopio
 print(robot.imu.attitude_get()) # roll/pitch/yaw ya fusionados

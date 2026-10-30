@@ -1,7 +1,7 @@
 # experimental (proyecto KL) -- todavia en ajuste, no se recomienda usar por ahora
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.orientation.pid_get())  # ganancias actuales del control de orientacion
 print(robot.orientation.pid_set(kp=2.0, cruise_deg_s=90.0, a_max_deg_s2=120.0, ts_ms=25))  # ajusta el PID

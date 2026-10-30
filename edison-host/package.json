@@ -1,0 +1,13 @@
+{
+  "name": "robocoffee-edison-host",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Servidor web y puente TCP para RoboCoffee en Intel Edison",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=0.10.28"
+  }
+}

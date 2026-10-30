@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#17231f">
+  <title>RoboCoffee | Centro de control</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="RoboCoffee inicio">
+        <span class="brand-mark">R</span>
+        <span><strong>RoboCoffee</strong><small>ROBOT SERVICE</small></span>
+      </a>
+      <div class="side-label">CONTROL</div>
+      <a class="nav-item active" href="#overview"><span class="nav-icon">◫</span> Resumen</a>
+      <a class="nav-item" href="#orders"><span class="nav-icon">▤</span> Pedidos <span id="order-count" class="nav-count">0</span></a>
+      <a class="nav-item" href="#testing"><span class="nav-icon">⌘</span> Pruebas</a>
+      <a class="nav-item" href="/cliente"><span class="nav-icon">☕</span> Menú público</a>
+      <div class="sidebar-bottom">
+        <span class="live-dot"></span>
+        <div><strong>Host Edison</strong><small id="host-address">Conectando…</small></div>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="brand-mark">R</span><strong>RoboCoffee</strong></div>
+        <div class="breadcrumbs">Centro de control <span>/</span> <strong>Resumen</strong></div>
+        <div class="topbar-right">
+          <span id="connection-badge" class="connection-badge pending"><i></i><span>Comprobando robot</span></span>
+          <button id="refresh-button" class="icon-button" type="button" aria-label="Actualizar estado" title="Actualizar estado">↻</button>
+        </div>
+      </header>
+
+      <section id="overview" class="content">
+        <div class="welcome-row">
+          <div>
+            <p class="eyebrow">PANEL DE OPERACIONES</p>
+            <h1>Buen día, <span>equipo.</span></h1>
+            <p class="subtitle">Monitorea RoboCoffee y gestiona las entregas desde aquí.</p>
+          </div>
+          <div class="clock-card"><span class="clock-icon">◷</span><div><small>HORA LOCAL</small><strong id="clock">--:--</strong></div></div>
+        </div>
+
+        <div class="hero-card">
+          <div class="hero-copy">
+            <span class="hero-tag"><i class="live-dot"></i> SISTEMA DE ENTREGA</span>
+            <h2>Tu café, en camino.</h2>
+            <p>El host sirve esta interfaz, recibe datos de la Pico W y conecta con el ESP32.</p>
+            <a href="#orders" class="hero-link">Ver pedidos <span>→</span></a>
+          </div>
+          <div class="coffee-art" aria-hidden="true">
+            <span class="steam steam-one"></span><span class="steam steam-two"></span>
+            <span class="coffee-cup"><span></span></span><span class="cup-shadow"></span>
+            <span class="art-spark spark-one">✦</span><span class="art-spark spark-two">✳</span>
+          </div>
+          <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+        </div>
+
+        <div class="section-heading">
+          <div><p class="eyebrow">TELEMETRÍA</p><h2>Estado del robot</h2></div>
+          <span id="last-updated" class="muted">Esperando primera lectura</span>
+        </div>
+        <div class="metrics-grid">
+          <article class="metric-card">
+            <div class="metric-top"><span class="metric-icon battery-icon">▰</span><span class="metric-label">BATERÍA</span></div>
+            <strong id="battery-value" class="metric-value">--</strong><span id="battery-detail" class="metric-foot">Esperando conexión</span>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top"><span class="metric-icon pose-icon">⌖</span><span class="metric-label">POSICIÓN X / Y</span></div>
+            <strong id="position-value" class="metric-value">-- / --</strong><span class="metric-foot">milímetros · odometría</span>
+            <span class="metric-decoration">⌖</span>
+          </article>
+          <article class="metric-card">
+            <div class="metric-top"><span class="metric-icon compass-icon">◉</span><span class="metric-label">ORIENTACIÓN</span></div>
+            <strong id="heading-value" class="metric-value">--°</strong><span id="attitude-detail" class="metric-foot">Yaw del IMU</span>
+            <span class="metric-decoration">⌁</span>
+          </article>
+          <article class="metric-card pico-card">
+            <div class="metric-top"><span class="metric-icon pico-icon">⌁</span><span class="metric-label">RASPBERRY PI PICO W</span></div>
+            <strong id="pico-value" class="metric-value pico-value">Sin datos</strong><span id="pico-detail" class="metric-foot">Publica en /api/pico/telemetry</span>
+            <span class="metric-decoration">◌</span>
+          </article>
+        </div>
+
+        <section id="testing" class="testing-panel">
+          <div class="section-heading compact">
+            <div><p class="eyebrow">MODO SEGURO</p><h2>Prueba manual de motores</h2></div>
+            <div class="testing-actions">
+              <button id="imu-debug-open" class="debug-button" type="button">DEBUG MPU</button>
+              <button id="stop-button" class="stop-button" type="button"><span>■</span> PARADA</button>
+            </div>
+          </div>
+          <p class="testing-description">Mantén presionado un control para mover el robot. Si se pierde la conexión, el host detiene los motores automáticamente.</p>
+          <div class="drive-controls">
+            <button class="drive-button forward" data-left="70" data-right="70" type="button" aria-label="Avanzar" title="Mantén para avanzar">↑</button>
+            <button class="drive-button left" data-left="-55" data-right="55" type="button" aria-label="Girar a la izquierda" title="Mantén para girar a la izquierda">←</button>
+            <button class="drive-button stop" id="pad-stop" type="button" aria-label="Detener">■</button>
+            <button class="drive-button right" data-left="55" data-right="-55" type="button" aria-label="Girar a la derecha" title="Mantén para girar a la derecha">→</button>
+            <button class="drive-button reverse" data-left="-70" data-right="-70" type="button" aria-label="Retroceder" title="Mantén para retroceder">↓</button>
+          </div>
+          <div id="test-message" class="test-message" role="status">Prueba el movimiento en un área despejada.</div>
+        </section>
+
+        <section id="orders" class="orders-section">
+          <div class="section-heading">
+            <div><p class="eyebrow">SERVICIO</p><h2>Pedidos recientes</h2></div>
+            <button id="new-order-button" class="primary-button" type="button"><span>＋</span> Nuevo pedido</button>
+          </div>
+          <div id="orders-list" class="orders-list">
+            <div class="empty-state"><span>☕</span><strong>Aún no hay pedidos</strong><p>Agrega un pedido de prueba para iniciar el flujo.</p></div>
+          </div>
+        </section>
+
+        <footer class="footer"><span>ROBOCOFFEE · CENTRO DE CONTROL</span><span>Intel Edison <b>·</b> ESP32 <b>·</b> Pico W</span></footer>
+      </section>
+    </main>
+  </div>
+
+  <div id="order-modal" class="modal-backdrop" aria-hidden="true">
+    <form id="order-form" class="modal">
+      <button class="modal-close" id="close-modal" type="button" aria-label="Cerrar">×</button>
+      <p class="eyebrow">NUEVO SERVICIO</p><h2>Preparar pedido</h2>
+      <label for="customer-name">Nombre del cliente</label>
+      <input id="customer-name" name="nombre" type="text" maxlength="60" placeholder="Ej. Carlos" required>
+      <label for="table-number">Mesa de entrega</label>
+      <select id="table-number" name="mesa">
+        <option value="1">Mesa 1 · 1.0 m</option><option value="2">Mesa 2 · 1.0 m</option>
+        <option value="3">Mesa 3 · 2.0 m</option><option value="4">Mesa 4 · 2.0 m</option>
+      </select>
+      <label for="coffee-type">Café</label>
+      <select id="coffee-type" name="cafe">
+        <option>Espresso</option><option>Latte</option><option>Capuccino</option><option>Americano</option>
+      </select>
+      <button class="primary-button submit-order" type="submit">Crear pedido <span>→</span></button>
+      <p id="form-error" class="form-error" role="alert"></p>
+    </form>
+  </div>
+  <div id="imu-debug-modal" class="modal-backdrop debug-backdrop" aria-hidden="true">
+    <section class="imu-debug-modal" role="dialog" aria-modal="true" aria-labelledby="imu-debug-title">
+      <button class="modal-close" id="imu-debug-close" type="button" aria-label="Cerrar">×</button>
+      <p class="eyebrow">TELEMETRÍA EN VIVO</p>
+      <h2 id="imu-debug-title">Depuración del MPU</h2>
+      <p class="debug-description">Roll, pitch y yaw del filtro de orientación. La gráfica muestra los últimos 30 segundos.</p>
+      <div class="imu-debug-readings">
+        <div><span>ROLL</span><strong id="imu-roll">--°</strong></div>
+        <div><span>PITCH</span><strong id="imu-pitch">--°</strong></div>
+        <div><span>YAW</span><strong id="imu-yaw">--°</strong></div>
+      </div>
+      <canvas id="imu-chart" class="imu-chart" role="img" aria-label="Gráfica en tiempo real de roll, pitch y yaw"></canvas>
+      <div class="imu-raw">
+        <strong>Lecturas crudas</strong>
+        <span id="imu-raw-values">Esperando datos del MPU…</span>
+      </div>
+      <p id="imu-debug-status" class="imu-debug-status" role="status">Conectando al MPU…</p>
+    </section>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

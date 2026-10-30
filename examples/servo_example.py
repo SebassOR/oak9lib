@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.servo.pid_get())  # ganancias actuales del control de velocidad en modo servo
 print(robot.servo.pid_set(kp=4.7404, ki=3.8541, kv=0.0043, ts_ms=25, deadband=0.5))  # ajusta el PID

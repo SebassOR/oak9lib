@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.battery.read())                      # voltaje actual de la bateria
 print(robot.battery.calibrate(raw=3027, mv=8631)) # raw=lectura ADC, mv=voltaje real medido con multimetro

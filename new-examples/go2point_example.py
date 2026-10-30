@@ -8,7 +8,7 @@ from oak9 import Robot
 x_ref = 300.0  # mm
 y_ref = 0.0  # mm
 
-robot = Robot("192.168.3.4")
+robot = Robot("192.168.100.9")
 
 try:
     robot.go2point.set(x=x_ref, y=y_ref)  # arranca: gira y luego avanza, solo

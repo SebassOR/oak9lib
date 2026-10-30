@@ -1,6 +1,6 @@
 from oak9 import Robot
 
-robot = Robot("192.168.3.3")
+robot = Robot("192.168.100.9")
 
 print(robot.encoder.read())        # ticks acumulados de cada rueda
 print(robot.encoder.reset())       # pone los contadores en 0

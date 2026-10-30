@@ -16,7 +16,7 @@ invertir_motor_der = False
 invertir_encoder_izq = True
 invertir_encoder_der = False
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print("antes:", robot.motor.invert_get(), robot.encoder.invert_get())
 

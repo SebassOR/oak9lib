@@ -5,7 +5,7 @@ linea por linea en vez de graficarse.
 """
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 try:
     muestras = robot.sample(robot.battery.read, duration=5.0, interval=0.1)  # 5s de lecturas, sin graficar

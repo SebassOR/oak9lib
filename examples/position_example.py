@@ -1,7 +1,7 @@
 # experimental (proyecto KL) -- todavia en ajuste, no se recomienda usar por ahora
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 
 print(robot.position.pid_get())  # ganancias actuales del control de posicion (x, y)
 print(robot.position.pid_set(kp=3.0, h_mm=100.0, cruise_mm_s=100.0, a_max_mm_s2=250.0, ts_ms=25))  # ajusta el PID

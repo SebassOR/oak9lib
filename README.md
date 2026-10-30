@@ -7,7 +7,7 @@ perfiles de movimiento desde una terminal, un script o un notebook.
 ```python
 from oak9 import Robot
 
-robot = Robot("192.168.3.1")
+robot = Robot("192.168.100.9")
 robot.motor.pwm(left=100, right=100)
 robot.motor.stop()
 robot.battery.read()
@@ -59,6 +59,13 @@ nada (o truena) aunque la instalación haya sido "exitosa".
   en vez de graficarlos.
 
 ## Uso básico
+
+### Host web para Intel Edison
+
+La carpeta [`edison-host/`](edison-host/) contiene una interfaz web Node.js
+para ejecutar el host en un Intel Edison, mostrar telemetría y administrar
+entregas con el ESP32. Incluye las instrucciones de instalación y la API
+HTTP para conectar la Raspberry Pi Pico W.
 
 `Robot(host, port=8080, timeout=5.0)` abre una conexión TCP al robot y
 expone un subsistema por sensor/actuador:
