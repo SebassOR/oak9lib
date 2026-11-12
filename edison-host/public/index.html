@@ -15,9 +15,11 @@
         <span><strong>RoboCoffee</strong><small>ROBOT SERVICE</small></span>
       </a>
       <div class="side-label">CONTROL</div>
+      <a class="nav-item" href="#dashboard"><span class="nav-icon">▥</span> Dashboard</a>
       <a class="nav-item active" href="#overview"><span class="nav-icon">◫</span> Resumen</a>
       <a class="nav-item" href="#orders"><span class="nav-icon">▤</span> Pedidos <span id="order-count" class="nav-count">0</span></a>
       <a class="nav-item" href="#testing"><span class="nav-icon">⌘</span> Pruebas</a>
+      <a class="nav-item" href="#servos"><span class="nav-icon">↔</span> Servos</a>
       <a class="nav-item" href="/cliente"><span class="nav-icon">☕</span> Menú público</a>
       <div class="sidebar-bottom">
         <span class="live-dot"></span>
@@ -28,6 +30,7 @@
     <main class="main-content">
       <header class="topbar">
         <div class="mobile-brand"><span class="brand-mark">R</span><strong>RoboCoffee</strong></div>
+        <a class="mobile-dashboard-link" href="#dashboard">Dashboard</a>
         <div class="breadcrumbs">Centro de control <span>/</span> <strong>Resumen</strong></div>
         <div class="topbar-right">
           <span id="connection-badge" class="connection-badge pending"><i></i><span>Comprobando robot</span></span>
@@ -49,7 +52,7 @@
           <div class="hero-copy">
             <span class="hero-tag"><i class="live-dot"></i> SISTEMA DE ENTREGA</span>
             <h2>Tu café, en camino.</h2>
-            <p>El host sirve esta interfaz, recibe datos de la Pico W y conecta con el ESP32.</p>
+            <p>El host sirve esta interfaz, recibe el MPU9250 de la Pico W y conecta con el ESP32.</p>
             <a href="#orders" class="hero-link">Ver pedidos <span>→</span></a>
           </div>
           <div class="coffee-art" aria-hidden="true">
@@ -59,6 +62,51 @@
           </div>
           <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
         </div>
+
+        <section id="dashboard" class="dashboard-section">
+          <div class="section-heading dashboard-heading">
+            <div><p class="eyebrow">INDICADORES</p><h2>Dashboard</h2></div>
+            <span class="dashboard-note">6 espacios disponibles · KPIs por definir</span>
+          </div>
+          <div class="dashboard-grid">
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">01</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 01</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">02</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 02</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">03</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 03</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">04</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 04</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">05</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 05</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+            <article class="dashboard-card">
+              <div class="dashboard-card-heading"><span class="dashboard-index">06</span><span class="dashboard-placeholder">Por definir</span></div>
+              <h3>Indicador 06</h3>
+              <div class="dashboard-chart" aria-hidden="true"><span></span></div>
+              <p>Visualización futura del KPI</p>
+            </article>
+          </div>
+        </section>
 
         <div class="section-heading">
           <div><p class="eyebrow">TELEMETRÍA</p><h2>Estado del robot</h2></div>
@@ -105,6 +153,19 @@
           <div id="test-message" class="test-message" role="status">Prueba el movimiento en un área despejada.</div>
         </section>
 
+        <section id="servos" class="servo-panel">
+          <div class="section-heading compact">
+            <div><p class="eyebrow">CONTROL MANUAL</p><h2>Servos de entrega</h2></div>
+            <span id="servo-state" class="servo-state">Estado desconocido</span>
+          </div>
+          <p class="servo-description">Abre o cierra ambos servos. Al llegar a la mesa se abrirán automáticamente y se cerrarán al confirmar la recepción.</p>
+          <div class="servo-actions">
+            <button class="servo-button open" type="button" data-servo-state="open">Abrir servos</button>
+            <button class="servo-button close" type="button" data-servo-state="closed">Cerrar servos</button>
+          </div>
+          <p id="servo-message" class="servo-message" role="status">Comprobando conexión con la Pico W…</p>
+        </section>
+
         <section id="orders" class="orders-section">
           <div class="section-heading">
             <div><p class="eyebrow">SERVICIO</p><h2>Pedidos recientes</h2></div>
@@ -144,18 +205,18 @@
       <button class="modal-close" id="imu-debug-close" type="button" aria-label="Cerrar">×</button>
       <p class="eyebrow">TELEMETRÍA EN VIVO</p>
       <h2 id="imu-debug-title">Depuración del MPU</h2>
-      <p class="debug-description">Roll, pitch y yaw del filtro de orientación. La gráfica muestra los últimos 30 segundos.</p>
+      <p class="debug-description">Orientación fusionada con giroscopio, acelerómetro y magnetómetro. La Pico publica telemetría una vez por segundo.</p>
       <div class="imu-debug-readings">
         <div><span>ROLL</span><strong id="imu-roll">--°</strong></div>
         <div><span>PITCH</span><strong id="imu-pitch">--°</strong></div>
         <div><span>YAW</span><strong id="imu-yaw">--°</strong></div>
       </div>
-      <canvas id="imu-chart" class="imu-chart" role="img" aria-label="Gráfica en tiempo real de roll, pitch y yaw"></canvas>
+      <canvas id="imu-chart" class="imu-chart" role="img" aria-label="Gráfica de roll, pitch y yaw recibidos de la Pico W"></canvas>
       <div class="imu-raw">
-        <strong>Lecturas crudas</strong>
+        <strong>Acelerómetro, giroscopio, magnetómetro y temperatura</strong>
         <span id="imu-raw-values">Esperando datos del MPU…</span>
       </div>
-      <p id="imu-debug-status" class="imu-debug-status" role="status">Conectando al MPU…</p>
+      <p id="imu-debug-status" class="imu-debug-status" role="status">Esperando telemetría de la Pico W…</p>
     </section>
   </div>
   <script src="/app.js"></script>

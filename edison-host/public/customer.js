@@ -1,8 +1,6 @@
 (function () {
   "use strict";
 
-  var temperatureInput = document.getElementById("temperature");
-  var temperatureOutput = document.getElementById("temperature-output");
   var recommendation = null;
   var selectedCoffee = "";
   var orderId = null;
@@ -69,6 +67,7 @@
   function renderMenu(data) {
     var html = "";
     var coffees = data.coffees || [];
+    var previousRecommendedCoffee = recommendation && recommendation.cafe;
     var i;
     var coffee;
     var isSelected;
@@ -76,8 +75,14 @@
     document.getElementById("climate-label").textContent = recommendation.clima.toUpperCase();
     document.getElementById("recommendation-title").textContent = recommendation.titulo;
     document.getElementById("recommendation-detail").textContent = recommendation.detalle;
-    document.getElementById("temperature-label").textContent = data.temperatureC + " °C";
-    if (!recommendationChanged && !selectedCoffee) selectedCoffee = recommendation.cafe;
+    document.getElementById("temperature-label").textContent =
+      data.temperatureSource.indexOf("MPU9250") >= 0 ?
+        data.temperatureC.toFixed(1) + " °C" : "Respaldo " + data.temperatureC + " °C";
+    document.getElementById("temperature-source").textContent = data.temperatureSource;
+    if (!recommendationChanged &&
+        (!selectedCoffee || selectedCoffee === previousRecommendedCoffee)) {
+      selectedCoffee = recommendation.cafe;
+    }
     for (i = 0; i < coffees.length; i += 1) {
       coffee = coffees[i];
       isSelected = selectedCoffee === coffee.id;
@@ -105,9 +110,7 @@
   }
 
   function loadMenu() {
-    var temperature = Number(temperatureInput.value);
-    temperatureOutput.textContent = temperature + " °C";
-    request("/api/menu?temperature=" + temperature, "GET", null, function (error, data) {
+    request("/api/menu", "GET", null, function (error, data) {
       if (error) {
         document.getElementById("form-error").textContent = error.message;
         return;
@@ -177,11 +180,6 @@
     document.getElementById("customer-name").focus();
   });
 
-  temperatureInput.addEventListener("input", function () {
-    temperatureOutput.textContent = temperatureInput.value + " °C";
-  });
-  temperatureInput.addEventListener("change", loadMenu);
-
   document.getElementById("customer-order-form").addEventListener("submit", function (event) {
     var form = event.currentTarget;
     var presentation;
@@ -240,4 +238,5 @@
   });
 
   loadMenu();
+  setInterval(loadMenu, 10000);
 }());

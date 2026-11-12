@@ -17,6 +17,7 @@
   var imuDebugSession = 0;
   var imuSamples = [];
   var lastOrders = [];
+  var servoRequestPending = false;
   var imuSeries = [
     { key: "roll", label: "Roll", color: "#4886b5" },
     { key: "pitch", label: "Pitch", color: "#d28a51" },
@@ -66,16 +67,28 @@
   }
 
   function formatRawImu(raw) {
-    var values = [];
-    var key;
-    if (!raw || typeof raw !== "object") return String(raw);
-    for (key in raw) {
-      if (Object.prototype.hasOwnProperty.call(raw, key) && key !== "command") {
-        values.push(key + ": " +
-          (typeof raw[key] === "number" ? raw[key].toFixed(3) : String(raw[key])));
+    function vector(value, digits) {
+      if (!value || typeof value.x !== "number" ||
+          typeof value.y !== "number" || typeof value.z !== "number") {
+        return "--";
       }
+      return "X " + value.x.toFixed(digits) + " · Y " +
+        value.y.toFixed(digits) + " · Z " + value.z.toFixed(digits);
     }
-    return values.length ? values.join(" · ") : JSON.stringify(raw);
+    if (!raw || typeof raw !== "object") return String(raw);
+    return [
+      "Aceleración: " + vector(raw.acceleration_g, 3) + " g",
+      "Giroscopio: " + vector(raw.gyroscope_dps, 2) + " °/s",
+      "Magnetómetro: " +
+        (raw.magnetometer_available === false ?
+          "No disponible" : vector(raw.magnetometer_ut, 2) + " µT"),
+      "Temperatura: " + formatValue(raw.temperature_c, 2) + " °C · promedio " +
+        formatValue(raw.temperature_avg_c, 2) + " °C (" +
+        (raw.temperature_samples || "--") + " muestras)",
+      "Rumbo: " +
+        (raw.attitude && raw.attitude.heading_source === "gyro_integrated" ?
+          "giroscopio integrado (relativo)" : "magnetómetro")
+    ].join("\n");
   }
 
   function drawImuChart() {
@@ -211,6 +224,7 @@
     request("/api/robot/imu", "GET", null, function (error, result) {
       var attitude;
       var sample;
+      var sampledAt;
       imuRequestPending = false;
       if (!imuDebugOpen || session !== imuDebugSession) return;
       if (error) {
@@ -222,22 +236,28 @@
           typeof attitude.roll !== "number" || !isFinite(attitude.roll) ||
           typeof attitude.pitch !== "number" || !isFinite(attitude.pitch) ||
           typeof attitude.yaw !== "number" || !isFinite(attitude.yaw)) {
-        setImuDebugStatus("El robot no devolvió roll, pitch y yaw válidos.", true);
+        setImuDebugStatus("La Pico W no publicó roll, pitch y yaw válidos.", true);
         return;
       }
+      sampledAt = typeof result.sampledAt === "number" ?
+        result.sampledAt : Date.now();
       sample = {
-        time: Date.now(),
+        time: sampledAt,
         roll: attitude.roll,
         pitch: attitude.pitch,
         yaw: attitude.yaw
       };
-      imuSamples.push(sample);
-      if (imuSamples.length > 120) imuSamples.shift();
+      if (!imuSamples.length ||
+          imuSamples[imuSamples.length - 1].time !== sampledAt) {
+        imuSamples.push(sample);
+        if (imuSamples.length > 120) imuSamples.shift();
+      }
       document.getElementById("imu-roll").textContent = sample.roll.toFixed(1) + "°";
       document.getElementById("imu-pitch").textContent = sample.pitch.toFixed(1) + "°";
       document.getElementById("imu-yaw").textContent = sample.yaw.toFixed(1) + "°";
       document.getElementById("imu-raw-values").textContent = formatRawImu(result.raw);
-      setImuDebugStatus("Lectura en vivo · intervalo solicitado: 250 ms.", false);
+      setImuDebugStatus("MPU9250 · última publicación " +
+        new Date(sampledAt).toLocaleTimeString(), false);
       drawImuChart();
     });
   }
@@ -250,10 +270,10 @@
     imuDebugModal.className = "modal-backdrop debug-backdrop open";
     imuDebugModal.setAttribute("aria-hidden", "false");
     document.getElementById("imu-raw-values").textContent = "Esperando datos del MPU…";
-    setImuDebugStatus("Conectando al MPU…", false);
+    setImuDebugStatus("Esperando telemetría de la Pico W…", false);
     drawImuChart();
     pollImu();
-    imuTimer = setInterval(pollImu, 250);
+    imuTimer = setInterval(pollImu, 100);
     document.getElementById("imu-debug-close").focus();
   }
 
@@ -295,8 +315,8 @@
         status.attitude ? formatValue(normalizeHeading(status.attitude.yaw), 1) + "°" : "--°";
       document.getElementById("attitude-detail").textContent =
         status.attitude ? "Roll " + formatValue(status.attitude.roll, 1) +
-          "° · Pitch " + formatValue(status.attitude.pitch, 1) + "°" :
-          "Abre DEBUG MPU para leer orientación";
+          "° · Pitch " + formatValue(status.attitude.pitch, 1) + "° · Pico W" :
+          "Esperando orientación de la Pico W";
       document.getElementById("last-updated").textContent =
         "Actualizado " + new Date().toLocaleTimeString();
       updatePico(status.pico);
@@ -305,18 +325,26 @@
 
   function updatePico(pico) {
     var display;
+    var age;
     if (!pico) {
       document.getElementById("pico-value").textContent = "Sin datos";
       document.getElementById("pico-detail").textContent = "Publica en /api/pico/telemetry";
       return;
     }
-    display = pico.data && (pico.data.status || pico.data.state || pico.data.message);
-    if (!display) display = "En línea";
+    age = Date.now() - new Date(pico.receivedAt).getTime();
+    if (!isFinite(age) || age > 15000) {
+      document.getElementById("pico-value").textContent = "Sin datos";
+      document.getElementById("pico-detail").textContent = "Telemetría de la Pico W vencida";
+      return;
+    }
+    display = pico.data && pico.data.temperature_avg_c;
+    if (typeof display === "number") display = display.toFixed(1) + " °C";
+    if (display === null || display === undefined || display === "") display = "En línea";
     if (typeof display !== "string") display = JSON.stringify(display);
     document.getElementById("pico-value").textContent =
       display.length > 23 ? display.slice(0, 20) + "…" : display;
     document.getElementById("pico-detail").textContent =
-      "Último dato " + new Date(pico.receivedAt).toLocaleTimeString();
+      "MPU9250 · promedio · " + new Date(pico.receivedAt).toLocaleTimeString();
   }
 
   function escapeHtml(value) {
@@ -380,9 +408,71 @@
     });
   }
 
+  function setServoButtonsDisabled(disabled) {
+    Array.prototype.forEach.call(
+      document.querySelectorAll(".servo-button"),
+      function (button) { button.disabled = disabled; }
+    );
+  }
+
+  function renderServoStatus(result) {
+    var state = result.applied || result.commanded;
+    var stateLabel = state === "open" ? "Abiertos" : "Cerrados";
+    var message;
+    document.getElementById("servo-state").textContent =
+      result.applied ? stateLabel : "Sin confirmar";
+    if (!result.connected) {
+      message = "La Pico W no tiene telemetría reciente.";
+    } else if (result.pending) {
+      message = "Esperando que la Pico W confirme: " + stateLabel.toLowerCase() + ".";
+    } else {
+      message = "Servos " + stateLabel.toLowerCase() + ".";
+    }
+    document.getElementById("servo-message").textContent = message;
+    document.getElementById("servo-message").className =
+      result.connected && !result.pending ? "servo-message" : "servo-message pending";
+  }
+
+  function refreshServos() {
+    request("/api/robot/servos", "GET", null, function (error, result) {
+      if (error) {
+        document.getElementById("servo-state").textContent = "Sin conexión";
+        document.getElementById("servo-message").textContent = error.message;
+        document.getElementById("servo-message").className = "servo-message error";
+        return;
+      }
+      renderServoStatus(result);
+    });
+  }
+
+  function setServos(state) {
+    if (servoRequestPending) return;
+    servoRequestPending = true;
+    setServoButtonsDisabled(true);
+    document.getElementById("servo-message").textContent =
+      state === "open" ? "Abriendo servos…" : "Cerrando servos…";
+    document.getElementById("servo-message").className = "servo-message pending";
+    request("/api/robot/servos", "POST", { state: state }, function (error, result) {
+      servoRequestPending = false;
+      setServoButtonsDisabled(false);
+      if (error) {
+        document.getElementById("servo-message").textContent = error.message;
+        document.getElementById("servo-message").className = "servo-message error";
+        return;
+      }
+      renderServoStatus({
+        commanded: result.servos.state,
+        applied: result.servos.state,
+        pending: false,
+        connected: true
+      });
+    });
+  }
+
   function refreshAll() {
     if (!imuDebugOpen) refreshStatus();
     refreshOrders();
+    refreshServos();
   }
 
   function setModal(open) {
@@ -475,6 +565,11 @@
   });
   document.getElementById("stop-button").addEventListener("click", sendStop);
   document.getElementById("pad-stop").addEventListener("click", sendStop);
+  Array.prototype.forEach.call(document.querySelectorAll(".servo-button"), function (button) {
+    button.addEventListener("click", function () {
+      setServos(button.getAttribute("data-servo-state"));
+    });
+  });
   document.getElementById("imu-debug-open").addEventListener("click", openImuDebug);
   document.getElementById("imu-debug-close").addEventListener("click", closeImuDebug);
   imuDebugModal.addEventListener("click", function (event) {
@@ -518,8 +613,10 @@
   }, 15000);
   refreshAll();
   pollingTimer = setInterval(function () {
+    if (!imuDebugOpen) refreshStatus();
     refreshOrders();
-  }, 3000);
+    refreshServos();
+  }, 5000);
   window.addEventListener("resize", function () {
     if (imuDebugOpen) drawImuChart();
   });

@@ -35,10 +35,8 @@
         <button id="choose-recommended" class="recommendation-button" type="button">Elegir recomendado <span>→</span></button>
       </div>
       <div class="temperature-control">
-        <label for="temperature">Temperatura de referencia</label>
-        <div class="temperature-values"><span>5 °C</span><output id="temperature-output" for="temperature">22 °C</output><span>40 °C</span></div>
-        <input id="temperature" type="range" min="5" max="40" step="1" value="22">
-        <small>No hay sensor meteorológico conectado; ajústala según el ambiente.</small>
+        <strong>Temperatura promedio del MPU9250</strong>
+        <small id="temperature-source">Esperando lecturas de la Raspberry Pi Pico W…</small>
       </div>
     </section>
 

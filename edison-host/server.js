@@ -12,12 +12,14 @@ var HOST = process.env.HOST || "0.0.0.0";
 var PORT = parseInt(process.env.PORT || "80", 10);
 var ROBOT_IP = process.env.ROBOT_IP || "192.168.100.9";
 var ROBOT_PORT = parseInt(process.env.ROBOT_PORT || "8080", 10);
+var PICO_TELEMETRY_MAX_AGE_MS = 15000;
 var DEFAULT_TEMPERATURE_C = parseFloat(process.env.AMBIENT_TEMP_C || "22");
 if (!isFinite(DEFAULT_TEMPERATURE_C) ||
     DEFAULT_TEMPERATURE_C < 5 || DEFAULT_TEMPERATURE_C > 40) {
   DEFAULT_TEMPERATURE_C = 22;
 }
 var MAX_BODY_BYTES = 8192;
+var SERVO_COMMAND_TIMEOUT_MS = 5000;
 
 var deliveryDistances = { 1: 1000, 2: 1000, 3: 2000, 4: 2000 };
 var turnDirections = { 1: 1, 2: -1, 3: 1, 4: -1 };
@@ -32,6 +34,8 @@ var manualSession = null;
 var manualFinish = null;
 var manualCommandPending = false;
 var motionCancelled = false;
+var servoCommand = { state: "closed", commandId: 0 };
+var servoCommandPending = false;
 
 var coffeeMenu = [
   {
@@ -81,7 +85,7 @@ function recommendationForTemperature(temperature) {
   };
 }
 
-function menuResponse(temperature) {
+function menuResponse(temperature, temperatureSource) {
   var recommendation = recommendationForTemperature(temperature);
   var menu = [];
   var i;
@@ -95,18 +99,40 @@ function menuResponse(temperature) {
   }
   return {
     temperatureC: temperature,
-    temperatureSource: "referencia configurable; no hay sensor meteorológico conectado",
+    temperatureSource: temperatureSource,
     recommendation: recommendation,
     coffees: menu
   };
 }
 
+function freshPicoTelemetry() {
+  if (!picoTelemetry ||
+      Date.now() - picoTelemetry.receivedAtMs > PICO_TELEMETRY_MAX_AGE_MS) {
+    return null;
+  }
+  return picoTelemetry;
+}
+
+function isVector(value) {
+  return value && typeof value.x === "number" && isFinite(value.x) &&
+    typeof value.y === "number" && isFinite(value.y) &&
+    typeof value.z === "number" && isFinite(value.z);
+}
+
+function isAttitude(value) {
+  return value && typeof value.roll === "number" && isFinite(value.roll) &&
+    typeof value.pitch === "number" && isFinite(value.pitch) &&
+    typeof value.yaw === "number" && isFinite(value.yaw);
+}
+
 function sendJson(response, status, value) {
+  var body = JSON.stringify(value);
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": Buffer.byteLength(body, "utf8"),
     "Cache-Control": "no-store"
   });
-  response.end(JSON.stringify(value));
+  response.end(body);
 }
 function sendError(response, status, message) {
   sendJson(response, status, { error: message });
@@ -295,13 +321,13 @@ function readPose(session, callback) {
 }
 
 function readYaw(session, callback) {
-  session.send("imu.attitude.get", function (error, attitude) {
-    if (error) return callback(error);
-    if (typeof attitude.yaw !== "number") {
-      return callback(new Error("imu.attitude.get no devolvió yaw."));
-    }
-    callback(null, normalizeAngle(attitude.yaw));
-  });
+  var telemetry = freshPicoTelemetry();
+  var attitude = telemetry && telemetry.data.attitude;
+  if (!isAttitude(attitude)) {
+    callback(new Error("No hay una orientación reciente válida del MPU9250 de la Pico W."));
+    return;
+  }
+  callback(null, normalizeAngle(attitude.yaw), telemetry.receivedAtMs);
 }
 
 function normalizeAngle(angle) {
@@ -428,7 +454,7 @@ function turnAndVerify(session, poseTarget, yawReference, yawChange, callback, a
   var targetYaw = normalizeAngle(yawReference + yawChange);
   var started = Date.now();
   var stableReadings = 0;
-  var previousYaw = null;
+  var previousSampledAt = null;
   attempt = attempt || 0;
 
   function startTurn(targetPose) {
@@ -446,7 +472,7 @@ function turnAndVerify(session, poseTarget, yawReference, yawChange, callback, a
         }
         started = Date.now();
         stableReadings = 0;
-        previousYaw = null;
+        previousSampledAt = null;
         check();
       });
     });
@@ -483,16 +509,24 @@ function turnAndVerify(session, poseTarget, yawReference, yawChange, callback, a
       });
       return;
     }
-    readYaw(session, function (error, yaw) {
+    readYaw(session, function (error, yaw, sampledAt) {
       var difference;
-      if (error) return callback(error);
+      if (error) {
+        session.send("robot.orientation.stop", function (stopError) {
+          if (stopError) {
+            callback(new Error(error.message +
+              " No se pudo detener el giro: " + stopError.message));
+            return;
+          }
+          callback(error);
+        });
+        return;
+      }
       difference = angularDifference(targetYaw, yaw);
       if (Math.abs(difference) <= 5) {
-        if (previousYaw !== null &&
-            Math.abs(angularDifference(yaw, previousYaw)) <= 5) {
+        if (sampledAt !== previousSampledAt) {
           stableReadings += 1;
-        } else {
-          stableReadings = 1;
+          previousSampledAt = sampledAt;
         }
         if (stableReadings >= 3) {
           callback(null, yaw);
@@ -500,8 +534,8 @@ function turnAndVerify(session, poseTarget, yawReference, yawChange, callback, a
         }
       } else {
         stableReadings = 0;
+        previousSampledAt = sampledAt;
       }
-      previousYaw = yaw;
       setTimeout(check, 100);
     });
   }
@@ -695,12 +729,23 @@ function hasBusyOrder(exceptOrder) {
   return false;
 }
 
+function hasMovingOrder() {
+  var i;
+  for (i = 0; i < orders.length; i += 1) {
+    if (orders[i].estado === "saliendo" || orders[i].estado === "regresando") {
+      return true;
+    }
+  }
+  return false;
+}
+
 function isRobotBusy(exceptOrder) {
   return manualControlActive || hasBusyOrder(exceptOrder);
 }
 
 function getRobotStatus(callback) {
   withRobot(function (error, session, finish) {
+    var telemetry;
     if (error) return callback(error);
     commandSequence(session, ["battery.read", "pose.get"],
       function (readError, results) {
@@ -710,13 +755,14 @@ function getRobotStatus(callback) {
           return;
         }
         finish(null);
+        telemetry = freshPicoTelemetry();
         callback(null, {
           connected: true,
           host: ROBOT_IP,
           port: ROBOT_PORT,
           battery: results[0],
           pose: results[1],
-          attitude: null,
+          attitude: telemetry ? telemetry.data.attitude : null,
           pico: picoTelemetry
         });
       });
@@ -729,6 +775,46 @@ function parseInteger(value, label, minimum, maximum) {
     throw new Error(label + " debe ser un entero entre " + minimum + " y " + maximum + ".");
   }
   return value;
+}
+
+function setServoCommand(state, callback) {
+  var commandId;
+  var startedAt;
+  if (servoCommandPending) {
+    callback(new Error("Ya hay un comando de servos en curso."));
+    return;
+  }
+  servoCommandPending = true;
+  commandId = servoCommand.commandId + 1;
+  startedAt = Date.now();
+
+  servoCommand = { state: state, commandId: commandId };
+
+  function finish(error, result) {
+    servoCommandPending = false;
+    callback(error, result);
+  }
+
+  function waitForAcknowledgement() {
+    var telemetry = freshPicoTelemetry();
+    var reported = telemetry && telemetry.data.servos;
+    if (servoCommand.commandId !== commandId) {
+      finish(new Error("El comando de los servos fue reemplazado."));
+      return;
+    }
+    if (reported && reported.command_id === commandId &&
+        reported.state === state) {
+      finish(null, { state: state, commandId: commandId });
+      return;
+    }
+    if (Date.now() - startedAt >= SERVO_COMMAND_TIMEOUT_MS) {
+      finish(new Error("La Pico W no confirmó el movimiento de los servos."));
+      return;
+    }
+    setTimeout(waitForAcknowledgement, 100);
+  }
+
+  waitForAcknowledgement();
 }
 
 function stopMotorWatchdog() {
@@ -837,13 +923,22 @@ function apiRequest(request, response, parsedUrl) {
 
   if (request.method === "GET" && pathname === "/api/menu") {
     var temperature = DEFAULT_TEMPERATURE_C;
+    var temperatureSource = "respaldo; esperando telemetría de la Pico W";
+    var telemetry = freshPicoTelemetry();
     if (parsedUrl.query && parsedUrl.query.temperature !== undefined) {
       temperature = Number(parsedUrl.query.temperature);
+      temperatureSource = "referencia manual";
+    } else if (telemetry &&
+        typeof telemetry.data.temperature_avg_c === "number" &&
+        isFinite(telemetry.data.temperature_avg_c)) {
+      temperature = telemetry.data.temperature_avg_c;
+      temperatureSource = "promedio del MPU9250 · Pico W";
     }
-    if (!isFinite(temperature) || temperature < 5 || temperature > 40) {
+    if (parsedUrl.query && parsedUrl.query.temperature !== undefined &&
+        (!isFinite(temperature) || temperature < 5 || temperature > 40)) {
       return sendError(response, 400, "La temperatura debe estar entre 5 y 40 °C.");
     }
-    sendJson(response, 200, menuResponse(temperature));
+    sendJson(response, 200, menuResponse(temperature, temperatureSource));
     return;
   }
   if (request.method === "GET" && pathname === "/api/health") {
@@ -851,7 +946,7 @@ function apiRequest(request, response, parsedUrl) {
       ok: true,
       service: "RoboCoffee Edison Host",
       robot: ROBOT_IP + ":" + ROBOT_PORT,
-      picoTelemetryReceived: !!picoTelemetry
+      picoTelemetryReceived: !!freshPicoTelemetry()
     });
     return;
   }
@@ -863,22 +958,30 @@ function apiRequest(request, response, parsedUrl) {
     return;
   }
   if (request.method === "GET" && pathname === "/api/robot/imu") {
-    withRobot(function (error, session, finish) {
-      if (error) return sendError(response, 503, error.message);
-      commandSequence(session, ["imu.read", "imu.attitude.get"],
-        function (readError, results) {
-          if (readError) {
-            finish(readError);
-            sendError(response, 502, readError.message);
-            return;
-          }
-          finish(null);
-          sendJson(response, 200, {
-            raw: results[0],
-            attitude: results[1],
-            sampledAt: Date.now()
-          });
-        });
+    var telemetry = freshPicoTelemetry();
+    if (!telemetry) {
+      return sendError(response, 503,
+        "No hay telemetría reciente del MPU9250 en la Pico W.");
+    }
+    sendJson(response, 200, {
+      raw: telemetry.data,
+      attitude: telemetry.data.attitude,
+      sampledAt: telemetry.receivedAtMs,
+      receivedAt: telemetry.receivedAt
+    });
+    return;
+  }
+  if (request.method === "GET" && pathname === "/api/robot/servos") {
+    var servoTelemetry = freshPicoTelemetry();
+    var appliedServos = servoTelemetry && servoTelemetry.data.servos;
+    sendJson(response, 200, {
+      commanded: servoCommand.state,
+      commandId: servoCommand.commandId,
+      applied: appliedServos ? appliedServos.state : null,
+      pending: !appliedServos ||
+        appliedServos.command_id !== servoCommand.commandId ||
+        appliedServos.state !== servoCommand.state,
+      connected: !!servoTelemetry
     });
     return;
   }
@@ -892,8 +995,65 @@ function apiRequest(request, response, parsedUrl) {
   if (request.method === "POST" && pathname === "/api/pico/telemetry") {
     readJson(request, function (error, payload) {
       if (error) return sendError(response, 400, error.message);
-      picoTelemetry = { receivedAt: new Date().toISOString(), data: payload };
-      sendJson(response, 202, { received: true });
+      if (!isVector(payload.acceleration_g) ||
+          !isVector(payload.gyroscope_dps) ||
+          (payload.magnetometer_ut !== undefined &&
+           payload.magnetometer_ut !== null &&
+           !isVector(payload.magnetometer_ut)) ||
+          typeof payload.temperature_c !== "number" ||
+          !isFinite(payload.temperature_c) ||
+          typeof payload.temperature_avg_c !== "number" ||
+          !isFinite(payload.temperature_avg_c) ||
+          !isAttitude(payload.attitude) ||
+          (payload.servos !== undefined &&
+           (!payload.servos || typeof payload.servos !== "object" ||
+            (payload.servos.state !== "open" &&
+             payload.servos.state !== "closed") ||
+            typeof payload.servos.command_id !== "number" ||
+            !isFinite(payload.servos.command_id) ||
+            Math.floor(payload.servos.command_id) !==
+              payload.servos.command_id ||
+            payload.servos.command_id < 0))) {
+        return sendError(response, 400,
+          "La telemetría debe incluir temperatura, aceleración, giroscopio y orientación válidos; magnetómetro y estado de servos son opcionales.");
+      }
+      picoTelemetry = {
+        receivedAt: new Date().toISOString(),
+        receivedAtMs: Date.now(),
+        data: payload
+      };
+      sendJson(response, 202, {
+        received: true,
+        servo_command: {
+          state: servoCommand.state,
+          command_id: servoCommand.commandId
+        }
+      });
+    });
+    return;
+  }
+  if (request.method === "POST" && pathname === "/api/robot/servos") {
+    readJson(request, function (error, payload) {
+      if (error) return sendError(response, 400, error.message);
+      if (payload.state !== "open" && payload.state !== "closed") {
+        return sendError(response, 400,
+          "El estado de los servos debe ser open o closed.");
+      }
+      if (hasMovingOrder()) {
+        return sendError(response, 409,
+          "No se pueden controlar los servos mientras el robot está en movimiento.");
+      }
+      if (servoCommandPending) {
+        return sendError(response, 409, "Ya hay un comando de servos en curso.");
+      }
+      if (!freshPicoTelemetry()) {
+        return sendError(response, 503,
+          "No hay telemetría reciente de la Pico W para controlar los servos.");
+      }
+      setServoCommand(payload.state, function (commandError, result) {
+        if (commandError) return sendError(response, 503, commandError.message);
+        sendJson(response, 200, { servos: result, confirmed: true });
+      });
     });
     return;
   }
@@ -942,31 +1102,52 @@ function apiRequest(request, response, parsedUrl) {
       if (isRobotBusy(order)) {
         return sendError(response, 409, "El robot está ocupado o requiere revisión.");
       }
+      if (servoCommandPending) {
+        return sendError(response, 409, "Hay un comando de servos en curso.");
+      }
       order.estado = "saliendo";
       order.error = null;
       sendJson(response, 202, { order: publicOrder(order) });
-      deliverOrder(order, function (error, travel) {
-        if (error) {
-          failOrderMotion(order, error);
+      setServoCommand("closed", function (closeError) {
+        if (closeError) {
+          failOrderMotion(order, closeError);
           return;
         }
-        Object.keys(travel).forEach(function (key) { order[key] = travel[key]; });
-        order.estado = "esperando_cliente";
+        deliverOrder(order, function (error, travel) {
+          if (error) {
+            failOrderMotion(order, error);
+            return;
+          }
+          Object.keys(travel).forEach(function (key) { order[key] = travel[key]; });
+          setServoCommand("open", function (servoError) {
+            if (servoError) {
+              failOrderMotion(order, servoError);
+              return;
+            }
+            order.estado = "esperando_cliente";
+          });
+        });
       });
       return;
     }
     if (order.estado !== "esperando_cliente") {
       return sendError(response, 409, "El robot todavía no está esperando al cliente.");
     }
-    order.estado = "regresando";
-    sendJson(response, 202, { order: publicOrder(order) });
-    returnOrder(order, function (error) {
-      if (error) {
-        failOrderMotion(order, error);
-        return;
-      }
-      order.estado = "completado";
-      order.error = null;
+    if (servoCommandPending) {
+      return sendError(response, 409, "Hay un comando de servos en curso.");
+    }
+    setServoCommand("closed", function (servoError) {
+      if (servoError) return sendError(response, 503, servoError.message);
+      order.estado = "regresando";
+      sendJson(response, 202, { order: publicOrder(order) });
+      returnOrder(order, function (error) {
+        if (error) {
+          failOrderMotion(order, error);
+          return;
+        }
+        order.estado = "completado";
+        order.error = null;
+      });
     });
     return;
   }

@@ -6,6 +6,7 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+/wifi_config.py
 
 # Editores / SO
 .DS_Store
